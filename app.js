@@ -20,7 +20,7 @@ app.post('/playerlogin',function(req, res){
 	});
 });
 
-serv.listen(2000);
+serv.listen(process.env.PORT);
 console.log("Server is Running on http://localhost:2000 ...");
 
 function indexofPlayer(x,y){
