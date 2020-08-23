@@ -1,4 +1,4 @@
-A multiplayer web server game - VCC GND
+### A multiplayer web server game - VCC GND
 This is a multiplayer web server game based on the concepts of snakes and ladders, an ancient Indian board game. In the FIRA 2020 Social Distancing Competition, it will be used as a platform where participants can participate virtually.
 
 FIRA 2020 Social Distancing Competition, Online Only Like most people, many FIRA participants have been impacted by the COVID-19 pandemic. We are all sad that we cannot meet this year as was originally planned.
