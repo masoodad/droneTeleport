@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Snake & Ladder Game</title>
+	 <link rel="stylesheet" href="../assets/styles.css">
+	 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+	 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+	 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" ></script>
+	 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" ></script>
+	 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" ></script>
+	 
+	 <script src="../assets/utils.js"></script>
+ 
+</head>
+<body>
+	<center><h1 id="player_name"></h1></center>
+	<div class="container">
+		<div><canvas class="canvasBoard" width="550" height="550"></canvas></div>
+		<h1 id="status"> </h1>
+		
+	</div>
+		
+	<div class="box">
+		<ul class="list-group up-box" id="ranklist">
+			<li class="list-group-item list-group-item-danger">Player Score: 3</li>
+			<li class="list-group-item list-group-item-info">Masood Score: 4</li>
+			</ul>
+		<div style="height:27%" class="list-group up-box">
+			<ul style="padding:0px;" id="ranklist2">		
+			</ul>
+		</div>
+		
+		
+		<div style="height:40%" class="down-box">
+			<video id="cam_input" height="212" width="277"></video>
+			<canvas  hidden id="canvas_output"></canvas>
+			<!-- <canvas id="canvas_output1"></canvas> -->
+			<button onclick="pic();">Verify</button>
+			
+		</div>
+		
+		
+		<script>
+	function openCvReady(){
+			let video = document.getElementById("cam_input"); // video is the id of video tag
+			navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+			.then(function(stream) {
+				video.srcObject = stream;
+				video.play();
+			})
+			.catch(function(err) {
+				console.log("An error occurred! " + err);
+			});
+			};
+		
+		
+	//transformPerspectiv function
+	
+	function transformPerspectiv(src){
+		//let src = cv.imread('canvasInput');
+		let dst = new cv.Mat(src.rows, src.cols, cv.CV_8U);
+		let dsize = new cv.Size(src.rows, src.cols);
+		
+		// cv.circl
+		let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 100, 277, 100, 0, 212, 277, 212]);
+		let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, 277, 0, 0, 212, 277, 212]);
+		let M = cv.getPerspectiveTransform(srcTri, dstTri);
+		// You can try more different parameters
+		cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+		cv.imshow('canvas_output', dst);
+		return dst;
+		src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete();
+
+	}
+		
+		
+	// Edge Finding
+	function edges(src){
+		let dst = new cv.Mat(src.rows, src.cols, cv.CV_8U);
+		// You can try more different parameters
+
+		cv.Canny(src, dst, 100, 200, 3, false);
+		
+		//cv.imshow('canvas_output1', dst);
+		return dst;
+		//src.delete(); dst.delete();
+	}
+	
+	
+	//Counting & Display Circles 
+	function countCircles(src){
+		//let src = cv.imread('canvasInput');
+		let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
+		let circles = new cv.Mat();
+		let color = new cv.Scalar(255, 0, 0);
+		//cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+		// You can try more different parameters
+		cv.HoughCircles(src, circles, cv.HOUGH_GRADIENT, 1, 45, 75, 40, 0, 0);
+						
+			
+						
+						
+		// draw circles
+		var ans = [];
+		for (let i = 0; i < circles.cols; ++i) {
+			let x = circles.data32F[i * 3];
+			let y = circles.data32F[i * 3 + 1];
+			let radius = circles.data32F[i * 3 + 2];
+			let center = new cv.Point(x, y);
+			cv.circle(dst, center, radius, color);
+			ans.push({'x':center.x,'y':center.y,'r':radius});
+		}
+		//cv.imshow('canvas_output', dst);
+		//src.delete(); dst.delete(); circles.delete();
+		console.log(circles);
+		return ans
+	}
+	
+	
+		
+	function pic(){
+		let video = document.getElementById("cam_input");
+		let cap = new cv.VideoCapture(cam_input);
+		let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+		cap.read(src);
+		
+		cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
+		let transform = transformPerspectiv(src);
+		let dst = edges(transform);
+		circle = countCircles(dst);
+		//console.log(getAns(circle));
+		let val = getAns(circle);
+		dice(val);
+		
+	}
+
+	function getAns(myArray){
+	console.log(myArray);
+	myArray.sort(function (a, b) {
+	    return a.r - b.r
+	});
+	var mi = myArray[0]; 
+	var newarr = myArray.filter(e => e != mi);
+	newarr.sort(function (a, b) {
+	    if(a.y==b.y)
+	    	return a.x-b.x;
+	    return a.y - b.y
+	});
+
+	for(var i=0;i<Math.min(4,newarr.length);++i){
+	var dx = newarr[i].x - mi.x;
+	var dy = newarr[i].y - mi.y;
+	var distance = Math.sqrt(dx * dx + dy * dy);
+		if(distance < newarr[i].r + mi.r){
+			if(i==0)
+				return 4; // top
+			if(i==1)
+				return 1; // medium left
+			if(i==2)
+				return 2; // medium right
+			if(i==3)
+				return 3; // down
+		}
+	}
+
+	return 0;
+	}	
+	</script>
+	<script async src="../assets/opencv.js" onload="openCvReady();"></script>
+	</div>
+	
+	
+	<script>
+			
+		var socket= io();
+		var name = "<%= name %>";
+		document.getElementById('player_name').innerHTML=name;
+		socket.emit('myname',{'name':name});
+			
+
+		
+		
+	//Dice Value Sended
+		var dice = function(data){
+			socket.emit('dice',{
+				random: (data)
+			});
+		}
+		
+	//Working with Canvas Chess
+		var canvas = document.querySelector('canvas');
+		var cordinate = [];
+		var teleporter = [];
+		var st_image = new Image();
+		var en_image = new Image();
+		var drone = new Image();
+		var teleport = new Image();
+		var mylogs=[];
+		drone.src = 'assets/drone.png';
+		teleport.src = 'assets/re_teleport.png';
+		st_image.src = 'assets/start.png';
+		en_image.src = 'assets/end.png';
+
+		canvas.width = 545;
+		canvas.height = 545;
+
+		var ctx = canvas.getContext('2d');
+		ctx.font = '40px Arial';
+
+
+	
+		var draw = function(){
+			ctx.clearRect(0,0,canvas.width,canvas.height);
+		//Drawing Board
+
+			var x=55;
+			var y=55;
+
+			for(var i=0; i<10; i++){
+				for(var j=0; j<10; j++){
+					ctx.fillStyle = 'blue';
+					ctx.fillRect(i*x,j*y,50, 50);
+					if(j%2==0 && (i)%2==0){
+					ctx.fillStyle = '#808080';
+					ctx.fillRect(i*x,j*y,50, 50);}else if((j+1)%2==0 && (i+1)%2==0){
+						ctx.fillStyle = '#F8F8FF';
+						ctx.fillRect(i*x,j*y,50, 50);
+					}
+				}
+			}
+			
+			
+			
+			for(var k=0; k< cordinate.length; k++){
+				ctx.beginPath();
+				ctx.arc(cordinate[k].x+15+k, cordinate[k].y-10, 15, 0, 2 * Math.PI);
+				ctx.fillStyle = cordinate[k].color;
+				ctx.fill();
+			}
+			var playerRanklist = ``;
+			for(var k=0; k< cordinate.length; k++){	
+					playerRanklist += '<li class="list-group-item list-group-item-info"><b> '+ cordinate[k].name + '   Position: </b>'+ cordinate[k].score + '</li>';
+			}
+			document.getElementById('ranklist').innerHTML = playerRanklist;
+			
+			var playerRanklist2 = ``;
+			for(var k=0; k< mylogs.length; k++){	
+					playerRanklist2 += '<li style="background-color:#FFEFD5" class="list-group-item list-group-item-info"><b>'+ mylogs[k].name +' </b>Moved: '+ mylogs[k].dice + ' Points</li>';
+				
+			}
+			document.getElementById('ranklist2').innerHTML = playerRanklist2;
+			
+
+			for(e in teleporter){
+				var d = teleporter[e];
+				ctx.fillStyle = '#E03A8F';
+
+				ctx.drawImage(drone,d.sx*55,d.sy*55,55,55);
+				ctx.drawImage(teleport,d.ex*55,d.ey*55,55,55);
+			}
+			
+			ctx.drawImage(st_image, 0, 490,55,55);
+			ctx.drawImage(en_image, 0, 0,55,55);
+			requestAnimationFrame(draw);
+		}
+				
+	// SOCKET ID Obtained
+		socket.on('target', function(telep){
+			teleporter = telep;
+		});
+		socket.on('newPositions', function(cordi){
+			cordinate = cordi;
+		});
+		
+		socket.on('logs',function(logs){
+			mylogs = logs;
+		});
+		
+		draw();
+
+	// SOCKET ALERT Obtained
+		socket.on('win', function(msg){
+			alert(msg);
+		});
+		
+	</script>
+</body>
+</html>
